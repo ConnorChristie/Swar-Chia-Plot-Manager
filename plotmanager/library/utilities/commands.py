@@ -16,7 +16,7 @@ from plotmanager.library.utilities.print import print_view, get_job_history
 from plotmanager.library.utilities.processes import is_windows, get_manager_processes, get_running_plots, start_process
 
 
-def start_manager():
+def start_manager(pargs):
     if get_manager_processes():
         raise ManagerError('Manager is already running.')
 
@@ -54,7 +54,7 @@ def start_manager():
     print('Plot Manager has started...')
 
 
-def stop_manager():
+def stop_manager(pargs):
     processes = get_manager_processes()
     if not processes:
         print("No manager processes were found.")
@@ -62,6 +62,7 @@ def stop_manager():
     for process in processes:
         try:
             process.terminate()
+            process.wait()
         except psutil.NoSuchProcess:
             pass
     if get_manager_processes():
@@ -69,7 +70,7 @@ def stop_manager():
     print("Successfully stopped manager processes.")
 
 
-def view():
+def view(pargs):
     chia_location, log_directory, config_jobs, manager_check_interval, max_concurrent, progress_settings, \
         notification_settings, debug_level, view_settings = get_config_info()
     view_check_interval = view_settings['check_interval']
@@ -126,7 +127,7 @@ def view():
             exit()
 
 
-def view_history():
+def view_history(pargs):
     chia_location, log_directory, config_jobs, manager_check_interval, max_concurrent, progress_settings, \
         notification_settings, debug_level, view_settings = get_config_info()
     analysis = {'files': {}}
@@ -134,7 +135,39 @@ def view_history():
     print(get_job_history(analysis, view_settings))
 
 
-def analyze_logs():
+def analyze_logs(pargs):
     chia_location, log_directory, jobs, manager_check_interval, max_concurrent, progress_settings, \
        notification_settings, debug_level, view_settings = get_config_info()
     analyze_log_times(log_directory)
+
+
+def kill_job(pargs):
+    pid = pargs.pid
+    delete_temp_files = pargs.delete_temp_files
+
+    print("yes" if delete_temp_files else "no")
+
+    chia_location, log_directory, config_jobs, manager_check_interval, max_concurrent, progress_settings, \
+        notification_settings, debug_level, view_settings = get_config_info()
+
+    running_work = {}
+    jobs = load_jobs(config_jobs)
+    jobs, running_work = get_running_plots(jobs=jobs, running_work=running_work)
+
+    if pid not in running_work:
+        print(f'No job found with PID = {pid}')
+        return
+
+    process = psutil.Process(pid=pid)
+    process.kill()
+    print('Killing process...')
+    process.wait()
+    print('Process killed')
+
+    if delete_temp_files:
+        print('Deleting temp files')
+        print(running_work[pid].plot_id)
+        print(running_work[pid].job.temporary_directory)
+        print(running_work[pid].job.temporary2_directory)
+    else:
+        print('Skipping deletion of temp files')

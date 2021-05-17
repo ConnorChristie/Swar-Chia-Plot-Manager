@@ -1,7 +1,7 @@
 import argparse
 
 from plotmanager.library.utilities.exceptions import InvalidArgumentException
-from plotmanager.library.utilities.commands import start_manager, stop_manager, view, analyze_logs, view_history
+from plotmanager.library.utilities.commands import start_manager, stop_manager, view, analyze_logs, view_history, kill_job
 
 
 parser = argparse.ArgumentParser(description='This is the central manager for Swar\'s Chia Plot Manager.')
@@ -17,28 +17,38 @@ will always be running in the background unless an error occurs. This field is c
 the progress settings in the YAML file.
 '''
 
-parser.add_argument(
-    dest='action',
-    type=str,
-    help=help_description,
-)
+def restart(args):
+    stop_manager(args)
+    start_manager(args)
+
+subparsers = parser.add_subparsers()
+
+parser_start = subparsers.add_parser('start', help='starts the Swar manager')
+parser_start.set_defaults(func=start_manager)
+
+parser_restart = subparsers.add_parser('restart', help='restarts the Swar manager')
+parser_restart.set_defaults(func=restart)
+
+parser_stop = subparsers.add_parser('stop', help='stops the Swar manager')
+parser_stop.set_defaults(func=stop_manager)
+
+parser_view = subparsers.add_parser('view', help='views the current jobs')
+parser_view.set_defaults(func=view)
+
+parser_analyze_logs = subparsers.add_parser('analyze_logs', help='analyzes the logs')
+parser_analyze_logs.set_defaults(func=analyze_logs)
+
+parser_history = subparsers.add_parser('history', help='shows job history')
+parser_history.set_defaults(func=view_history)
+
+parser_kill = subparsers.add_parser('kill', help='kills a job')
+parser_kill.add_argument('pid', type=int, default=-1)
+parser_kill.add_argument('--delete-temp-files', '-d', action='store_true', default=False, help='deletes the temporary files associated with the PID')
+parser_kill.set_defaults(func=kill_job)
 
 args = parser.parse_args()
 
-if args.action == 'start':
-    start_manager()
-elif args.action == 'restart':
-    stop_manager()
-    start_manager()
-elif args.action == 'stop':
-    stop_manager()
-elif args.action == 'view':
-    view()
-elif args.action == 'analyze_logs':
-    analyze_logs()
-elif args.action == 'history':
-    view_history()
-else:
-    error_message = 'Invalid action provided. The valid options are "start", "restart", "stop", "view", ' \
-                    '"analyze_logs", and "history".'
-    raise InvalidArgumentException(error_message)
+try:
+    args.func(args)
+except AttributeError:
+    parser.print_help()
