@@ -158,11 +158,11 @@ def kill_job(pargs):
         print(f'No job found with PID = {pid}')
         return
 
-    process = psutil.Process(pid=pid)
-    process.kill()
-    print('Killing process...')
-    process.wait()
-    print('Process killed')
+    # process = psutil.Process(pid=pid)
+    # process.kill()
+    # print('Killing process...')
+    # process.wait()
+    # print('Process killed')
 
     if delete_temp_files:
         print('Deleting temp files')
