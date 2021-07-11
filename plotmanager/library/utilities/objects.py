@@ -24,6 +24,7 @@ class Job:
 
     temporary_directory = None
     temporary2_directory = None
+    replot_plots_before = None
     destination_directory = []
     exclude_final_directory = None
     skip_full_destinations = None

@@ -1,3 +1,4 @@
+import os
 import logging
 import psutil
 
@@ -6,7 +7,7 @@ from datetime import datetime, timedelta
 
 from plotmanager.library.commands import plots
 from plotmanager.library.utilities.exceptions import InvalidConfigurationSetting
-from plotmanager.library.utilities.processes import identify_drive, is_windows, start_process
+from plotmanager.library.utilities.processes import identify_drive, is_windows, start_process, get_plot_older_then
 from plotmanager.library.utilities.objects import Job, Work
 from plotmanager.library.utilities.log import get_log_file_name
 
@@ -19,11 +20,6 @@ def has_active_jobs_and_work(jobs):
 
 
 def get_target_directories(job, drives_free_space):
-    job_offset = job.total_completed + job.total_running
-
-    if job.skip_full_destinations:
-        logging.info('Checking for full destinations.')
-        job = check_valid_destinations(job, drives_free_space)
     destination_directory = job.destination_directory
     temporary_directory = job.temporary_directory
     temporary2_directory = job.temporary2_directory
@@ -31,12 +27,40 @@ def get_target_directories(job, drives_free_space):
     if not destination_directory:
         return None, None, None, job
 
-    if isinstance(job.destination_directory, list):
-        destination_directory = job.destination_directory[job_offset % len(job.destination_directory)]
+    drives = list(drives_free_space.keys())
+    job_size = determine_job_size(job.size)
+
+    while True:
+        # destination_directory list may be different each loop iteration
+        if isinstance(job.destination_directory, list):
+            destination_directory = job.destination_directory[job.current_work_id % len(job.destination_directory)]
+
+        drive = identify_drive(file_path=destination_directory, drives=drives)
+
+        if drives_free_space[drive] is None or drives_free_space[drive] >= job_size:
+            break
+        else:
+            if job.replot_plots_before is not None:
+                replot_plots_before = datetime.strptime(job.replot_plots_before, '%Y-%m-%d %H:%M:%S')
+                old_plot = get_plot_older_then(destination_directory, replot_plots_before)
+
+                if old_plot is not None:
+                    logging.info(f'Found a plot older than {replot_plots_before}: {old_plot}')
+                    logging.info('Deleting plot to make space for new plot.')
+                    #os.remove(old_plot)
+                    break
+
+        if job.skip_full_destinations:
+            logging.info('Checking for full destinations.')
+            job = check_valid_destinations(job, drives_free_space)
+        else:
+            logging.info('No drives with free space. Next plot may not succeed.')
+            break
+
     if isinstance(job.temporary_directory, list):
-        temporary_directory = job.temporary_directory[job_offset % len(job.temporary_directory)]
+        temporary_directory = job.temporary_directory[job.current_work_id % len(job.temporary_directory)]
     if isinstance(job.temporary2_directory, list):
-        temporary2_directory = job.temporary2_directory[job_offset % len(job.temporary2_directory)]
+        temporary2_directory = job.temporary2_directory[job.current_work_id % len(job.temporary2_directory)]
 
     return destination_directory, temporary_directory, temporary2_directory, job
 
@@ -64,7 +88,7 @@ def check_valid_destinations(job, drives_free_space):
 
     return job
 
-        
+
 def load_jobs(config_jobs):
     jobs = []
     checked_job_names = []

@@ -139,6 +139,20 @@ def identify_drive(file_path, drives):
     return None
 
 
+def get_plot_older_then(path, date):
+    for file in os.listdir(path):
+        abs_path = os.path.join(path, file)
+
+        if file.endswith('.plot') and os.path.isfile(abs_path):
+            file_last_modified = os.path.getmtime(abs_path)
+            file_last_modified_time = datetime.fromtimestamp(file_last_modified)
+
+            if file_last_modified_time < date:
+                return abs_path
+
+    return None
+
+
 def get_plot_id(file_path=None, contents=None):
     if not contents:
         f = open(file_path, 'r')

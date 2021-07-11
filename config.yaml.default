@@ -213,6 +213,7 @@ jobs:
     temporary2_directory:
       - J:\Plots
       - K:\Plots
+    replot_plots_before: '2021-07-10 12:00:00'
     destination_directory:
       - J:\Plots
       - K:\Plots
