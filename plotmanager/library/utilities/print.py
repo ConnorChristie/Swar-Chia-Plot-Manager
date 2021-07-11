@@ -195,12 +195,14 @@ def print_view(jobs, running_work, analysis, drives, next_log_check, view_settin
         drive_data = get_drive_data(drives, running_work, job_data)
 
     manager_processes = get_manager_processes()
+    pretty_job_data = pretty_print_job_data(job_data)
 
     if os.name == 'nt':
         os.system('cls')
     else:
         os.system('clear')
-    print(pretty_print_job_data(job_data))
+
+    print(pretty_job_data)
     print(f'Manager Status: {"Running" if manager_processes else "Stopped"}')
     print()
 
