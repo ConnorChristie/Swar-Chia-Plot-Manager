@@ -143,6 +143,7 @@ def load_jobs(config_jobs):
                                               f'{directory}')
         job.temporary_directory = temporary_directory
         job.destination_directory = info['destination_directory']
+        job.replot_plots_before = info['replot_plots_before']
 
         temporary2_directory = info.get('temporary2_directory', None)
         if not temporary2_directory:
