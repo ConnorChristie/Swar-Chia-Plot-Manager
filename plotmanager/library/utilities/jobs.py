@@ -63,6 +63,9 @@ def get_target_directories(job, drives_free_space):
     if isinstance(job.temporary2_directory, list):
         temporary2_directory = job.temporary2_directory[job.current_work_id % len(job.temporary2_directory)]
 
+    destination_directory = f'{destination_directory}/nft'
+    logging.info(f'Real destination directory: {destination_directory}')
+
     return destination_directory, temporary_directory, temporary2_directory, job
 
 
