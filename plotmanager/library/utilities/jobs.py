@@ -19,7 +19,7 @@ def has_active_jobs_and_work(jobs):
     return False
 
 
-def get_target_directories(job, drives_free_space):
+def get_target_directories(job, drives_used_space, drives_total_space):
     destination_directory = job.destination_directory
     temporary_directory = job.temporary_directory
     temporary2_directory = job.temporary2_directory
@@ -27,7 +27,7 @@ def get_target_directories(job, drives_free_space):
     if not destination_directory:
         return None, None, None, job
 
-    drives = list(drives_free_space.keys())
+    drives = list(drives_used_space.keys())
     job_size = determine_job_size(job.size)
 
     while True:
@@ -37,11 +37,11 @@ def get_target_directories(job, drives_free_space):
 
         drive = identify_drive(file_path=destination_directory, drives=drives)
 
-        if drives_free_space[drive] is None or drives_free_space[drive] >= job_size:
+        if drives_used_space[drive] is None or (drives_total_space[drive] - drives_used_space[drive]) >= job_size:
             break
         else:
             if job.replot_plots_before is not None:
-                logging.info(f'Check if drive "{destination_directory}" can be replot')
+                logging.info(f'Checking if drive "{destination_directory}" can be replot')
                 replot_plots_before = datetime.strptime(job.replot_plots_before, '%Y-%m-%d %H:%M:%S')
                 old_plot = get_plot_older_then(destination_directory, replot_plots_before)
 
@@ -49,11 +49,12 @@ def get_target_directories(job, drives_free_space):
                     logging.info(f'Found a plot older than {replot_plots_before}: {old_plot}')
                     logging.info('Deleting plot to make space for new plot.')
                     os.remove(old_plot)
-                    break
+                    drives_used_space[drive] -= job_size
+                    continue
 
         if job.skip_full_destinations:
             logging.info('Checking for full destinations.')
-            job = check_valid_destinations(job, drives_free_space)
+            job = check_valid_destinations(job, drives_used_space, drives_total_space)
         else:
             logging.info('No drives with free space. Next plot may not succeed.')
             break
@@ -69,9 +70,9 @@ def get_target_directories(job, drives_free_space):
     return destination_directory, temporary_directory, temporary2_directory, job
 
 
-def check_valid_destinations(job, drives_free_space):
+def check_valid_destinations(job, drives_used_space, drives_total_space):
     job_size = determine_job_size(job.size)
-    drives = list(drives_free_space.keys())
+    drives = list(drives_used_space.keys())
     destination_directories = job.destination_directory
     if not isinstance(destination_directories, list):
         destination_directories = [destination_directories]
@@ -79,8 +80,8 @@ def check_valid_destinations(job, drives_free_space):
     valid_destinations = []
     for directory in destination_directories:
         drive = identify_drive(file_path=directory, drives=drives)
-        logging.info(f'Drive "{drive}" has {drives_free_space[drive]} free space.')
-        if drives_free_space[drive] is None or drives_free_space[drive] >= job_size:
+        logging.info(f'Drive "{drive}" has {(drives_total_space[drive] - drives_used_space[drive])} free space.')
+        if drives_used_space[drive] is None or (drives_total_space[drive] - drives_used_space[drive]) >= job_size:
             valid_destinations.append(directory)
             continue
         logging.error(f'Drive "{drive}" does not have enough space. This directory will be skipped.')
@@ -182,7 +183,7 @@ def determine_job_size(k_size):
     except ValueError:
         return 0
     base_k_size = 32
-    size = 1090000000
+    size = 109000000000
     if k_size < base_k_size:
         # Why 2.058? Just some quick math.
         size /= pow(2.058, base_k_size-k_size)
@@ -194,36 +195,35 @@ def determine_job_size(k_size):
 
 def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, next_job_work, chia_location,
                           log_directory, next_log_check, minimum_minutes_between_jobs, system_drives, backend):
-    drives_free_space = {}
+    drives_used_space = {}
+    drives_total_space = {}
     for job in jobs:
         directories = [job.destination_directory]
         if isinstance(job.destination_directory, list):
             directories = job.destination_directory
         for directory in directories:
             drive = identify_drive(file_path=directory, drives=system_drives)
-            if drive in drives_free_space:
+            if drive in drives_used_space:
                 continue
             try:
-                free_space = psutil.disk_usage(drive).free
+                used_space = psutil.disk_usage(drive).used
+                total_space = psutil.disk_usage(drive).total
             except:
                 logging.exception(f"Failed to get disk_usage of drive {drive}.")
                 # I need to do this because if Manager fails, I don't want it to break.
-                free_space = None
-            drives_free_space[drive] = free_space
+                used_space = None
+            drives_used_space[drive] = used_space
+            drives_total_space[drive] = total_space
 
-    logging.info(f'Free space before checking active jobs: {drives_free_space}')
-    logging.info(running_work)
+    logging.info(f'Used space before checking active jobs: {drives_used_space}')
     for pid, work in running_work.items():
         drive = work.destination_drive
-        logging.info(f'work: {work}, drive: {drive}')
-        if drive not in drives_free_space or drives_free_space[drive] is None:
-            logging.info(f'continue?')
+        if drive not in drives_used_space or drives_used_space[drive] is None:
             continue
         work_size = determine_job_size(work.k_size)
-        logging.info(f'Freespace: {drives_free_space[drive]}, size: {work_size}')
-        drives_free_space[drive] -= work_size
+        drives_used_space[drive] += work_size
         logging.info(drive)
-    logging.info(f'Free space after checking active jobs: {drives_free_space}')
+    logging.info(f'Used space after checking active jobs: {drives_used_space}')
 
     total_phase_1_count = 0
     for pid in running_work.keys():
@@ -297,7 +297,8 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
             job=job,
             chia_location=chia_location,
             log_directory=log_directory,
-            drives_free_space=drives_free_space,
+            drives_used_space=drives_used_space,
+            drives_total_space=drives_total_space,
             backend=backend,
         )
         jobs[i] = deepcopy(job)
@@ -310,7 +311,7 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
     return jobs, running_work, next_job_work, next_log_check
 
 
-def start_work(job, chia_location, log_directory, drives_free_space, backend):
+def start_work(job, chia_location, log_directory, drives_used_space, drives_total_space, backend):
     logging.info(f'Starting new plot for job: {job.name}')
     nice_val = job.unix_process_priority
     if is_windows():
@@ -320,7 +321,7 @@ def start_work(job, chia_location, log_directory, drives_free_space, backend):
     log_file_path = get_log_file_name(log_directory, job, now)
     logging.info(f'Job log file path: {log_file_path}')
     destination_directory, temporary_directory, temporary2_directory, job = \
-        get_target_directories(job, drives_free_space=drives_free_space)
+        get_target_directories(job, drives_used_space=drives_used_space, drives_total_space=drives_total_space)
     if not destination_directory:
         return job, None
 
