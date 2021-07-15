@@ -212,9 +212,12 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
             drives_free_space[drive] = free_space
 
     logging.info(f'Free space before checking active jobs: {drives_free_space}')
+    logging.info(running_work)
     for pid, work in running_work.items():
         drive = work.destination_drive
+        logging.info(f'work: {work}, drive: {drive}')
         if drive not in drives_free_space or drives_free_space[drive] is None:
+            logging.info(f'continue?')
             continue
         work_size = determine_job_size(work.k_size)
         drives_free_space[drive] -= work_size
