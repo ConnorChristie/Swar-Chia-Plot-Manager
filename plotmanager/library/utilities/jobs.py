@@ -30,7 +30,7 @@ def get_target_directories(job, latest_work, drives_used_space, drives_total_spa
     drives = list(drives_used_space.keys())
     job_size = determine_job_size(job.size)
 
-    latest_dest_index = job.destination_directory.index(latest_work.destination_directory) if latest_work is not None else -1
+    latest_dest_index = job.destination_directory.index(latest_work.destination_drive) if latest_work is not None else -1
 
     while True:
         # destination_directory list may be different each loop iteration
