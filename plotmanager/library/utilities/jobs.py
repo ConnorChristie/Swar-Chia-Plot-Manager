@@ -19,7 +19,7 @@ def has_active_jobs_and_work(jobs):
     return False
 
 
-def get_target_directories(job, drives_used_space, drives_total_space):
+def get_target_directories(job, latest_work, drives_used_space, drives_total_space):
     destination_directory = job.destination_directory
     temporary_directory = job.temporary_directory
     temporary2_directory = job.temporary2_directory
@@ -30,10 +30,12 @@ def get_target_directories(job, drives_used_space, drives_total_space):
     drives = list(drives_used_space.keys())
     job_size = determine_job_size(job.size)
 
+    latest_dest_index = job.destination_directory.index(latest_work.destination_directory) if latest_work is not None else -1
+
     while True:
         # destination_directory list may be different each loop iteration
         if isinstance(job.destination_directory, list):
-            destination_directory = job.destination_directory[job.current_work_id % len(job.destination_directory)]
+            destination_directory = job.destination_directory[(latest_dest_index + 1) % len(job.destination_directory)]
 
         drive = identify_drive(file_path=destination_directory, drives=drives)
 
@@ -294,8 +296,11 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
                              f'stagger. Min: {minimum_stagger}, Current: {next_job_work[j.name]}')
                 next_job_work[j.name] = minimum_stagger
 
+        latest_work = running_work[job.running_work[-1]] if len(job.running_work) > 0 else None
+
         job, work = start_work(
             job=job,
+            latest_work=latest_work,
             chia_location=chia_location,
             log_directory=log_directory,
             drives_used_space=drives_used_space,
@@ -312,7 +317,7 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
     return jobs, running_work, next_job_work, next_log_check
 
 
-def start_work(job, chia_location, log_directory, drives_used_space, drives_total_space, backend):
+def start_work(job, latest_work, chia_location, log_directory, drives_used_space, drives_total_space, backend):
     logging.info(f'Starting new plot for job: {job.name}')
     nice_val = job.unix_process_priority
     if is_windows():
@@ -322,7 +327,7 @@ def start_work(job, chia_location, log_directory, drives_used_space, drives_tota
     log_file_path = get_log_file_name(log_directory, job, now)
     logging.info(f'Job log file path: {log_file_path}')
     destination_directory, temporary_directory, temporary2_directory, job = \
-        get_target_directories(job, drives_used_space=drives_used_space, drives_total_space=drives_total_space)
+        get_target_directories(job, latest_work, drives_used_space=drives_used_space, drives_total_space=drives_total_space)
     if not destination_directory:
         return job, None
 
