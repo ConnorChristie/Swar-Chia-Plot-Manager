@@ -247,7 +247,6 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
             if running_work[pid].current_phase > 1:
                 continue
             phase_1_count += 1
-        job.current_work_id = len(job.running_work)
         logging.info(f'Total jobs: {len(job.running_work)}, and in phase 1: {phase_1_count}')
         if job.max_for_phase_1 and phase_1_count >= job.max_for_phase_1:
             logging.info(f'Job max for phase 1 met, skipping. Max: {job.max_for_phase_1}')
@@ -335,6 +334,8 @@ def start_work(job, chia_location, log_directory, drives_used_space, drives_tota
     work.log_file = log_file_path
     work.datetime_start = now
     work.work_id = job.current_work_id
+
+    job.current_work_id += 1
 
     if job.temporary2_destination_sync:
         logging.info(f'Job temporary2 and destination sync')
