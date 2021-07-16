@@ -218,7 +218,7 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
     logging.info(f'Used space before checking active jobs: {drives_used_space}')
     for pid, work in running_work.items():
         drive = work.destination_drive
-        logging.info(f'Starting to update drive: {drive}')
+        logging.info(f'Starting to update drive for {pid}: {drive}')
         if drive not in drives_used_space or drives_used_space[drive] is None:
             continue
         work_size = determine_job_size(work.k_size)
@@ -247,7 +247,8 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
             if running_work[pid].current_phase > 1:
                 continue
             phase_1_count += 1
-        logging.info(f'Total jobs in phase 1: {phase_1_count}')
+        job.current_work_id = len(job.running_work)
+        logging.info(f'Total jobs: {len(job.running_work)}, and in phase 1: {phase_1_count}')
         if job.max_for_phase_1 and phase_1_count >= job.max_for_phase_1:
             logging.info(f'Job max for phase 1 met, skipping. Max: {job.max_for_phase_1}')
             continue
@@ -334,8 +335,6 @@ def start_work(job, chia_location, log_directory, drives_used_space, drives_tota
     work.log_file = log_file_path
     work.datetime_start = now
     work.work_id = job.current_work_id
-
-    job.current_work_id += 1
 
     if job.temporary2_destination_sync:
         logging.info(f'Job temporary2 and destination sync')
