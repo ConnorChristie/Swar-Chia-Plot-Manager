@@ -216,13 +216,17 @@ def monitor_jobs_to_start(jobs, running_work, max_concurrent, max_for_phase_1, n
             drives_total_space[drive] = total_space
 
     logging.info(f'Used space before checking active jobs: {drives_used_space}')
-    for pid, work in running_work.items():
-        drive = work.destination_drive
-        if drive not in drives_used_space or drives_used_space[drive] is None:
-            continue
-        work_size = determine_job_size(work.k_size)
-        drives_used_space[drive] += work_size
-        logging.info(drive)
+
+    for job in jobs:
+        for pid, work in job.running_work.items():
+            drive = work.destination_drive
+            logging.info(f'Starting to update drive: {drive}')
+            if drive not in drives_used_space or drives_used_space[drive] is None:
+                continue
+            work_size = determine_job_size(work.k_size)
+            drives_used_space[drive] += work_size
+            logging.info(f'Finished updating drive: {drive}')
+
     logging.info(f'Used space after checking active jobs: {drives_used_space}')
 
     total_phase_1_count = 0
