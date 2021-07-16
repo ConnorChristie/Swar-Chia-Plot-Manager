@@ -85,7 +85,7 @@ if minimum_minutes_between_jobs and len(running_work.keys()) > 0:
 logging.info(f'Starting loop.')
 while has_active_jobs_and_work(jobs):
     logging.info(f'Grabbing running plots.')
-    for job in current_jobs:
+    for job in jobs:
         job.running_work = []
     current_jobs, current_running_work = get_running_plots(jobs=jobs, running_work={},
                                                            instrumentation_settings=instrumentation_settings, backend=backend)
