@@ -84,22 +84,26 @@ if minimum_minutes_between_jobs and len(running_work.keys()) > 0:
 
 logging.info(f'Starting loop.')
 while has_active_jobs_and_work(jobs):
+    logging.info(f'Grabbing running plots.')
+    current_jobs, current_running_work = get_running_plots(jobs=jobs, running_work={},
+                                                           instrumentation_settings=instrumentation_settings, backend=backend)
+
     # CHECK LOGS FOR DELETED WORK
     logging.info(f'Checking log progress..')
-    check_log_progress(jobs=jobs, running_work=running_work, progress_settings=progress_settings,
+    check_log_progress(jobs=current_jobs, running_work=current_running_work, progress_settings=progress_settings,
                        notification_settings=notification_settings, view_settings=view_settings,
                        instrumentation_settings=instrumentation_settings, backend=backend)
     next_log_check = datetime.now() + timedelta(seconds=manager_check_interval)
 
     logging.info(f'Clearing zombies')
 
-    for job in jobs:
+    for job in current_jobs:
         non_zombie_work = []
         for pid in job.running_work:
             if psutil.Process(pid).status() != 'zombie':
                 non_zombie_work.append(pid)
             else:
-                del running_work[pid]
+                del current_running_work[pid]
                 job.total_running = job.total_running - 1
 
         job.running_work = non_zombie_work
@@ -107,8 +111,8 @@ while has_active_jobs_and_work(jobs):
     # DETERMINE IF JOB NEEDS TO START
     logging.info(f'Monitoring jobs to start.')
     jobs, running_work, next_job_work, next_log_check = monitor_jobs_to_start(
-        jobs=jobs,
-        running_work=running_work,
+        jobs=current_jobs,
+        running_work=current_running_work,
         max_concurrent=max_concurrent,
         max_for_phase_1=max_for_phase_1,
         next_job_work=next_job_work,
