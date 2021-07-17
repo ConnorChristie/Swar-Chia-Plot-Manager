@@ -169,7 +169,7 @@ def get_plot_older_then(path, date):
     for file in os.listdir(path):
         abs_path = os.path.join(path, file)
 
-        if file.endswith('.plot') and os.path.isfile(abs_path):
+        if file.endswith('.plot') and os.path.isfile(abs_path) and os.path.getsize(abs_path) > 50000:
             file_last_modified = os.path.getmtime(abs_path)
             file_last_modified_time = datetime.fromtimestamp(file_last_modified)
 
