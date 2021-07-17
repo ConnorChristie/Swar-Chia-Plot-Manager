@@ -170,8 +170,8 @@ def get_plot_older_then(path, date):
         abs_path = os.path.join(path, file)
 
         if file.endswith('.plot') and os.path.isfile(abs_path) and os.path.getsize(abs_path) > 50000:
-            file_last_modified = os.path.getmtime(abs_path)
-            file_last_modified_time = datetime.fromtimestamp(file_last_modified)
+            m = re.search(r'plot-k32-(\d+-\d+-\d+-\d+-\d+)-.*\.plot', file)
+            file_last_modified_time = datetime.strptime(m.group(1), '%Y-%m-%d-%H-%M')
 
             if file_last_modified_time < date:
                 return abs_path
