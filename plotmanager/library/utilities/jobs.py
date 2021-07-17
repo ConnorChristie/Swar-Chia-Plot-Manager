@@ -47,12 +47,12 @@ def get_target_directories(job, latest_work, drives_used_space, drives_total_spa
                 replot_plots_before = datetime.strptime(job.replot_plots_before, '%Y-%m-%d %H:%M:%S')
                 old_plot = get_plot_older_then(destination_directory, replot_plots_before)
 
-                # if old_plot is not None:
-                #     logging.info(f'Found a plot older than {replot_plots_before}: {old_plot}')
-                #     logging.info('Deleting plot to make space for new plot.')
-                #     os.remove(old_plot)
-                #     drives_used_space[drive] -= job_size
-                #     continue
+                if old_plot is not None:
+                    logging.info(f'Found a plot older than {replot_plots_before}: {old_plot}')
+                    logging.info('Deleting plot to make space for new plot.')
+                    os.remove(old_plot)
+                    drives_used_space[drive] -= job_size
+                    continue
 
         if job.skip_full_destinations:
             logging.info('Checking for full destinations.')
