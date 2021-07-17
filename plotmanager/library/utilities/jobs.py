@@ -45,6 +45,7 @@ def get_target_directories(job, latest_work, drives_used_space, drives_total_spa
             if job.replot_plots_before is not None:
                 logging.info(f'Checking if drive "{destination_directory}" can be replot')
                 replot_plots_before = datetime.strptime(job.replot_plots_before, '%Y-%m-%d %H:%M:%S')
+                logging.info(f'Replot before time: {replot_plots_before}')
                 old_plot = get_plot_older_then(destination_directory, replot_plots_before)
 
                 if old_plot is not None:

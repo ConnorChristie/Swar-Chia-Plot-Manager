@@ -173,6 +173,8 @@ def get_plot_older_then(path, date):
             file_last_modified = os.path.getmtime(abs_path)
             file_last_modified_time = datetime.fromtimestamp(file_last_modified)
 
+            logging.info(f'Plot: {abs_path}, last time: {file_last_modified_time}')
+
             if file_last_modified_time < date:
                 return abs_path
 
