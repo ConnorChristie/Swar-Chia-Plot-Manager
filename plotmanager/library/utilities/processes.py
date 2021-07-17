@@ -170,7 +170,8 @@ def get_plot_older_then(path, date):
         abs_path = os.path.join(path, file)
 
         if file.endswith('.plot') and os.path.isfile(abs_path):
-            m = re.search(r'plot-k32-(\d+-\d+-\d+-\d+-\d+)-.*\.plot', file).lastgroup
+            m = re.search(r'plot-k32-(\d+-\d+-\d+-\d+-\d+)-.*\.plot', file)
+            logging.info(f'Re: {m}, {m.groups()}')
             file_last_modified_time = datetime.strptime(m, '%Y-%m-%d-%H-%M')
 
             logging.info(f'file: {file}, time: {file_last_modified_time}, group: {m}')
