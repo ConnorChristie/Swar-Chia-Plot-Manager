@@ -53,6 +53,10 @@ def get_target_directories(job, latest_work, drives_used_space, drives_total_spa
                     os.remove(old_plot)
                     drives_used_space[drive] -= job_size
                     continue
+                else:
+                    # Skip to next drive if this one has none left to replot
+                    job.destination_directory.remove(destination_directory)
+                    continue
 
         if job.skip_full_destinations:
             logging.info('Checking for full destinations.')
